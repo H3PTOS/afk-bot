@@ -39,6 +39,7 @@ function createBot(username) {
         host: serverHost,
         port: serverPort,
         username: username,
+        version: "1.20.1" // ✅ نفس إصدار السيرفر
       })
 
       // تحميل الـ Plugins
@@ -48,6 +49,7 @@ function createBot(username) {
 
       bot.once('spawn', () => {
         console.log(`✅ ${username} دخل السيرفر!`)
+        bot.chat("✅ البوت شغال وجاهز!")
 
         const mcData = mcDataLoader(bot.version)
         const defaultMove = new Movements(bot, mcData)
@@ -84,7 +86,7 @@ function createBot(username) {
           bot.pathfinder.setGoal(new goals.GoalBlock(x, y, z))
         }, 20000)
 
-        // ====== يجمع خشب / دايموند عشوائي ======
+        // ====== يجمع خشب / دايموند / ايرون عشوائي ======
         setInterval(async () => {
           const targets = [
             mcData.blocksByName.oak_log?.id,
@@ -103,11 +105,11 @@ function createBot(username) {
           }
         }, 60000)
 
-        // ====== كلام عشوائي زي البشر ======
+        // ====== كلام عشوائي زي البشر كل 30 ثانية ======
         setInterval(() => {
           const msg = randomMessages[Math.floor(Math.random() * randomMessages.length)]
           bot.chat(msg)
-        }, 15000 + Math.random() * 10000)
+        }, 30000)
 
         // ====== ردود على كلام الناس ======
         bot.on('chat', async (player, message) => {
@@ -130,14 +132,13 @@ function createBot(username) {
             }
           }
 
-          // ====== أمر مخصص: BOTNAME get me <resource> <count> <password> ======
+          // ====== BOTNAME get me <resource> <count> <password> ======
           if (lowerMsg.startsWith(bot.username.toLowerCase() + " get me")) {
             const parts = lowerMsg.split(" ")
             const resource = parts[parts.length - 3]
             const count = parseInt(parts[parts.length - 2]) || 1
             const password = parts[parts.length - 1]
 
-            // تحقق من الباسورد
             if (password !== BOT_PASSWORD) {
               bot.chat(`❌ يا ${player}, الباسورد غلط! 📌 مثال: ${bot.username} get me wood 5 ${BOT_PASSWORD}`)
               return
@@ -167,7 +168,6 @@ function createBot(username) {
                 collected++
               }
 
-              // بعد ما يخلص يدي الحاجة لللاعب
               const targetPlayer = bot.players[player]?.entity
               if (targetPlayer) {
                 const goal = new goals.GoalNear(targetPlayer.position.x, targetPlayer.position.y, targetPlayer.position.z, 1)
@@ -188,6 +188,34 @@ function createBot(username) {
               bot.chat("❌ حصل خطأ و مش قادر اجمع الحاجة")
               console.log(err)
             }
+          }
+
+          // ====== follow me ======
+          if (lowerMsg.startsWith(bot.username.toLowerCase() + " follow me")) {
+            const password = lowerMsg.split(" ").pop()
+            if (password !== BOT_PASSWORD) {
+              bot.chat(`❌ يا ${player}, الباسورد غلط!`)
+              return
+            }
+            const targetPlayer = bot.players[player]?.entity
+            if (!targetPlayer) {
+              bot.chat(`❌ مش لاقيك يا ${player}`)
+              return
+            }
+            bot.chat(`👣 حاضر يا ${player}, جاي وراك!`)
+            const goal = new goals.GoalFollow(targetPlayer, 1)
+            bot.pathfinder.setGoal(goal, true)
+          }
+
+          // ====== stop follow ======
+          if (lowerMsg.startsWith(bot.username.toLowerCase() + " stop follow")) {
+            const password = lowerMsg.split(" ").pop()
+            if (password !== BOT_PASSWORD) {
+              bot.chat(`❌ يا ${player}, الباسورد غلط!`)
+              return
+            }
+            bot.pathfinder.setGoal(null)
+            bot.chat(`🛑 تمام يا ${player}, وقفت المتابعة!`)
           }
         })
       })
