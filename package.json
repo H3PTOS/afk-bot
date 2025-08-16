@@ -1,16 +1,17 @@
 {
-  "name": "afk-bot",
+  "name": "minecraft-bot",
   "version": "1.0.0",
-  "description": "Minecraft AFK Bot",
+  "description": "Smart Minecraft Bot",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "mineflayer": "^4.20.1",
-    "mineflayer-pathfinder": "^2.4.2",
-    "mineflayer-collectblock": "^1.2.3",
-    "mineflayer-pvp": "^1.4.0",
-    "minecraft-data": "^3.54.0"
+    "mineflayer": "4.16.0",
+    "mineflayer-pathfinder": "1.9.0",
+    "mineflayer-collectblock": "1.3.0",
+    "mineflayer-pvp": "1.3.0",
+    "minecraft-data": "3.66.0",
+    "express": "4.19.2"
   }
 }
