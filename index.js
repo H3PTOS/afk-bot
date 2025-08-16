@@ -12,6 +12,9 @@ const serverPort = 23761                   // البورت
 // أسماء البوتات
 const botNames = ["GOOLDENBOT1", "GOOLDENBOT2", "GOOLDENBOT3"]
 
+// باسورد الأوامر
+const BOT_PASSWORD = "7717"
+
 // رسائل عشوائية طبيعية زي البشر
 const randomMessages = [
   "هاي 👋",
@@ -81,7 +84,7 @@ function createBot(username) {
           bot.pathfinder.setGoal(new goals.GoalBlock(x, y, z))
         }, 20000)
 
-        // ====== يجمع خشب / دايموند ======
+        // ====== يجمع خشب / دايموند عشوائي ======
         setInterval(async () => {
           const targets = [
             mcData.blocksByName.oak_log?.id,
@@ -109,12 +112,13 @@ function createBot(username) {
         // ====== ردود على كلام الناس ======
         bot.on('chat', async (player, message) => {
           if (player === bot.username) return
+          const lowerMsg = message.toLowerCase()
 
-          if (message.toLowerCase().includes("هاي")) bot.chat("هاي 🙋‍♂️")
-          if (message.toLowerCase().includes("سلام")) bot.chat("تيت 👋")
+          if (lowerMsg.includes("هاي")) bot.chat("هاي 🙋‍♂️")
+          if (lowerMsg.includes("سلام")) bot.chat("تيت 👋")
 
           // ====== لو لاعب كتب "give me" ======
-          if (message.toLowerCase().includes("give me")) {
+          if (lowerMsg.includes("give me")) {
             bot.chat(`تمام يا ${player} 😃 خد الحاجات اللي جمعتها`)
             const items = bot.inventory.items()
             for (const item of items) {
@@ -123,6 +127,66 @@ function createBot(username) {
               } catch (err) {
                 console.log("❌ مش قادر ارمي الايتيم:", err.message)
               }
+            }
+          }
+
+          // ====== أمر مخصص: BOTNAME get me <resource> <count> <password> ======
+          if (lowerMsg.startsWith(bot.username.toLowerCase() + " get me")) {
+            const parts = lowerMsg.split(" ")
+            const resource = parts[parts.length - 3]
+            const count = parseInt(parts[parts.length - 2]) || 1
+            const password = parts[parts.length - 1]
+
+            // تحقق من الباسورد
+            if (password !== BOT_PASSWORD) {
+              bot.chat(`❌ يا ${player}, الباسورد غلط! 📌 مثال: ${bot.username} get me wood 5 ${BOT_PASSWORD}`)
+              return
+            }
+
+            let blockId = null
+            if (resource === "wood") blockId = mcData.blocksByName.oak_log?.id
+            if (resource === "diamond") blockId = mcData.blocksByName.diamond_ore?.id
+            if (resource === "iron") blockId = mcData.blocksByName.iron_ore?.id
+
+            if (!blockId) {
+              bot.chat(`❌ مش فاهم يعني ايه ${resource}, جرب wood/iron/diamond`)
+              return
+            }
+
+            bot.chat(`⛏️ حاضر يا ${player}, بجمع ${count} ${resource}!`)
+
+            try {
+              let collected = 0
+              while (collected < count) {
+                const block = bot.findBlock({ matching: blockId, maxDistance: 32 })
+                if (!block) {
+                  bot.chat(`⚠️ مش لاقي ${resource} كفاية, جمعت ${collected}/${count}`)
+                  break
+                }
+                await bot.collectBlock.collect(block)
+                collected++
+              }
+
+              // بعد ما يخلص يدي الحاجة لللاعب
+              const targetPlayer = bot.players[player]?.entity
+              if (targetPlayer) {
+                const goal = new goals.GoalNear(targetPlayer.position.x, targetPlayer.position.y, targetPlayer.position.z, 1)
+                await bot.pathfinder.goto(goal)
+
+                let given = 0
+                for (const item of bot.inventory.items()) {
+                  if (item.name.includes(resource) && given < count) {
+                    await bot.tossStack(item)
+                    given += item.count
+                  }
+                }
+                bot.chat(`✅ خلصت يا ${player}, سلمتك ${resource}!`)
+              } else {
+                bot.chat(`❌ مش لاقيك يا ${player}, قربلي`)
+              }
+            } catch (err) {
+              bot.chat("❌ حصل خطأ و مش قادر اجمع الحاجة")
+              console.log(err)
             }
           }
         })
