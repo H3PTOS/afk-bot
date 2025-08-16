@@ -1,5 +1,7 @@
 const mineflayer = require('mineflayer')
 const express = require('express')
+const { pathfinder, Movements, goals } = require('mineflayer-pathfinder')
+const collectBlock = require('mineflayer-collectblock').plugin
 
 // ====== إعداد السيرفر ======
 const serverHost = "GOLDEN-u8nn.aternos.me" // IP بتاع السيرفر
@@ -8,17 +10,22 @@ const serverPort = 23761                   // البورت
 // أسماء البوتات
 const botNames = ["GOOLDENBOT1", "GOOLDENBOT2", "GOOLDENBOT3"]
 
-// رسائل البوتات
-const messages = [
+// رسائل عشوائية طبيعية زي البشر
+const randomMessages = [
   "هاي 👋",
   "عاملين ايه؟ 😃",
   "لقيت دايموند 🔥",
   "عاش 👑",
-  "بنيت بيت 🏠"
+  "بنيت بيت 🏠",
+  "😂😂 انا تايه",
+  "مين عنده اكل؟ 🍗",
+  "في كهف مرعب هنا 😱",
+  "يلا نبني قلعة 🏰",
+  "ايه الاخبار يا شباب؟ 🙌"
 ]
 
-// ====== إنشاء بوت مع خاصية الـ Reconnect ======
-function createBot(username, index) {
+// ====== إنشاء بوت مع خاصية Reconnect + حركة ذكية ======
+function createBot(username) {
   let bot
 
   function startBot() {
@@ -29,28 +36,45 @@ function createBot(username, index) {
         username: username,
       })
 
-      bot.on('spawn', () => {
+      // تحميل الـ Plugins
+      bot.loadPlugin(pathfinder)
+      bot.loadPlugin(collectBlock)
+
+      bot.once('spawn', () => {
         console.log(`✅ ${username} دخل السيرفر!`)
 
-        // حركة عشوائية كل 5 ثواني
+        const mcData = require('minecraft-data')(bot.version)
+        const defaultMove = new Movements(bot, mcData)
+        bot.pathfinder.setMovements(defaultMove)
+
+        // حركة عشوائية كل 20 ثانية
         setInterval(() => {
-          const actions = ['forward', 'back', 'left', 'right', 'jump', 'sneak']
-          const action = actions[Math.floor(Math.random() * actions.length)]
+          const x = bot.entity.position.x + (Math.random() * 20 - 10)
+          const y = bot.entity.position.y
+          const z = bot.entity.position.z + (Math.random() * 20 - 10)
+          bot.pathfinder.setGoal(new goals.GoalBlock(x, y, z))
+        }, 20000)
 
-          if (action === 'jump') {
-            bot.setControlState('jump', true)
-            setTimeout(() => bot.setControlState('jump', false), 500)
-          } else if (action === 'sneak') {
-            bot.setControlState('sneak', true)
-            setTimeout(() => bot.setControlState('sneak', false), 2000)
-          } else {
-            bot.setControlState(action, true)
-            setTimeout(() => bot.setControlState(action, false), 2000)
+        // يحاول يجمع خشب لو شافه
+        setInterval(async () => {
+          const oak = mcData.blocksByName.oak_log?.id
+          if (!oak) return
+          const block = bot.findBlock({ matching: oak, maxDistance: 16 })
+          if (block) {
+            console.log(`${username} 🌲 لقى خشب وبيجمعه`)
+            try {
+              await bot.collectBlock.collect(block)
+            } catch (err) {
+              console.log("❌ مش قادر يجيب الخشب:", err.message)
+            }
           }
-        }, 5000)
+        }, 60000)
 
-        // الكلام بين البوتات
-        setTimeout(() => chatLoop(bot, index), 10000)
+        // كلام عشوائي زي البشر
+        setInterval(() => {
+          const msg = randomMessages[Math.floor(Math.random() * randomMessages.length)]
+          bot.chat(msg)
+        }, 15000 + Math.random() * 10000) // كل 15–25 ثانية
       })
 
       // لو حصل Error أو Disconnect → يعيد المحاولة بعد 30 ثانية
@@ -72,34 +96,20 @@ function createBot(username, index) {
   startBot()
 }
 
-// ====== وظيفة الكلام ======
-function chatLoop(bot, index) {
-  let msgIndex = 0
-  setInterval(() => {
-    bot.chat(messages[msgIndex])
-    msgIndex = (msgIndex + 1) % messages.length
-  }, (botNames.length * 20000))
-
-  setTimeout(() => {
-    bot.chat(messages[0])
-  }, index * 20000)
-}
-
 // ====== تشغيل كل البوتات ======
-botNames.forEach((name, i) => createBot(name, i))
+botNames.forEach((name) => createBot(name))
 
 // ====== Web Server للـ Railway ======
 const app = express()
-app.get('/', (req, res) => res.send('✅ Minecraft AFK Bot is running on Railway!'))
+app.get('/', (req, res) => res.send('✅ Smart Minecraft Bots are running on Railway!'))
 app.listen(process.env.PORT || 3000, () => {
   console.log("🌍 Web server running (for Railway keep-alive)")
 })
 
-// ====== Anti-Crash عام لكل المشروع ======
+// ====== Anti-Crash عام ======
 process.on('uncaughtException', (err) => {
   console.error('💥 Uncaught Exception:', err)
 })
-
 process.on('unhandledRejection', (reason, promise) => {
   console.error('💥 Unhandled Rejection:', reason)
 })
