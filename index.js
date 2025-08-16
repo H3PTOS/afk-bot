@@ -29,6 +29,12 @@ const randomMessages = [
   "ايه الاخبار يا شباب؟ 🙌"
 ]
 
+// Cooldown system
+let lastChat = 0
+function canChat() {
+  return Date.now() - lastChat > 25000 // 25 ثانية
+}
+
 // ====== إنشاء بوت مع خاصية Reconnect + ذكاء ======
 function createBot(username) {
   let bot
@@ -54,6 +60,14 @@ function createBot(username) {
         const mcData = mcDataLoader(bot.version)
         const defaultMove = new Movements(bot, mcData)
         bot.pathfinder.setMovements(defaultMove)
+
+        // دالة للكلام بأمان (مع كول داون)
+        bot.safeChat = (msg) => {
+          if (canChat()) {
+            bot.chat(msg)
+            lastChat = Date.now()
+          }
+        }
 
         // ====== يلبس أي درع موجود ======
         function equipArmor() {
@@ -107,8 +121,11 @@ function createBot(username) {
 
         // ====== كلام عشوائي زي البشر كل 30 ثانية ======
         setInterval(() => {
-          const msg = randomMessages[Math.floor(Math.random() * randomMessages.length)]
-          bot.chat(msg)
+          if (canChat()) {
+            const msg = randomMessages[Math.floor(Math.random() * randomMessages.length)]
+            bot.chat(msg)
+            lastChat = Date.now()
+          }
         }, 30000)
 
         // ====== ردود على كلام الناس ======
@@ -116,12 +133,12 @@ function createBot(username) {
           if (player === bot.username) return
           const lowerMsg = message.toLowerCase()
 
-          if (lowerMsg.includes("هاي")) bot.chat("هاي 🙋‍♂️")
-          if (lowerMsg.includes("سلام")) bot.chat("تيت 👋")
+          if (lowerMsg.includes("هاي")) bot.safeChat("هاي 🙋‍♂️")
+          if (lowerMsg.includes("سلام")) bot.safeChat("تيت 👋")
 
           // ====== لو لاعب كتب "give me" ======
           if (lowerMsg.includes("give me")) {
-            bot.chat(`تمام يا ${player} 😃 خد الحاجات اللي جمعتها`)
+            bot.safeChat(`تمام يا ${player} 😃 خد الحاجات اللي جمعتها`)
             const items = bot.inventory.items()
             for (const item of items) {
               try {
@@ -140,7 +157,7 @@ function createBot(username) {
             const password = parts[parts.length - 1]
 
             if (password !== BOT_PASSWORD) {
-              bot.chat(`❌ يا ${player}, الباسورد غلط! 📌 مثال: ${bot.username} get me wood 5 ${BOT_PASSWORD}`)
+              bot.safeChat(`❌ يا ${player}, الباسورد غلط! 📌 مثال: ${bot.username} get me wood 5 ${BOT_PASSWORD}`)
               return
             }
 
@@ -150,18 +167,18 @@ function createBot(username) {
             if (resource === "iron") blockId = mcData.blocksByName.iron_ore?.id
 
             if (!blockId) {
-              bot.chat(`❌ مش فاهم يعني ايه ${resource}, جرب wood/iron/diamond`)
+              bot.safeChat(`❌ مش فاهم يعني ايه ${resource}, جرب wood/iron/diamond`)
               return
             }
 
-            bot.chat(`⛏️ حاضر يا ${player}, بجمع ${count} ${resource}!`)
+            bot.safeChat(`⛏️ حاضر يا ${player}, بجمع ${count} ${resource}!`)
 
             try {
               let collected = 0
               while (collected < count) {
                 const block = bot.findBlock({ matching: blockId, maxDistance: 32 })
                 if (!block) {
-                  bot.chat(`⚠️ مش لاقي ${resource} كفاية, جمعت ${collected}/${count}`)
+                  bot.safeChat(`⚠️ مش لاقي ${resource} كفاية, جمعت ${collected}/${count}`)
                   break
                 }
                 await bot.collectBlock.collect(block)
@@ -180,12 +197,12 @@ function createBot(username) {
                     given += item.count
                   }
                 }
-                bot.chat(`✅ خلصت يا ${player}, سلمتك ${resource}!`)
+                bot.safeChat(`✅ خلصت يا ${player}, سلمتك ${resource}!`)
               } else {
-                bot.chat(`❌ مش لاقيك يا ${player}, قربلي`)
+                bot.safeChat(`❌ مش لاقيك يا ${player}, قربلي`)
               }
             } catch (err) {
-              bot.chat("❌ حصل خطأ و مش قادر اجمع الحاجة")
+              bot.safeChat("❌ حصل خطأ و مش قادر اجمع الحاجة")
               console.log(err)
             }
           }
@@ -194,15 +211,15 @@ function createBot(username) {
           if (lowerMsg.startsWith(bot.username.toLowerCase() + " follow me")) {
             const password = lowerMsg.split(" ").pop()
             if (password !== BOT_PASSWORD) {
-              bot.chat(`❌ يا ${player}, الباسورد غلط!`)
+              bot.safeChat(`❌ يا ${player}, الباسورد غلط!`)
               return
             }
             const targetPlayer = bot.players[player]?.entity
             if (!targetPlayer) {
-              bot.chat(`❌ مش لاقيك يا ${player}`)
+              bot.safeChat(`❌ مش لاقيك يا ${player}`)
               return
             }
-            bot.chat(`👣 حاضر يا ${player}, جاي وراك!`)
+            bot.safeChat(`👣 حاضر يا ${player}, جاي وراك!`)
             const goal = new goals.GoalFollow(targetPlayer, 1)
             bot.pathfinder.setGoal(goal, true)
           }
@@ -211,11 +228,83 @@ function createBot(username) {
           if (lowerMsg.startsWith(bot.username.toLowerCase() + " stop follow")) {
             const password = lowerMsg.split(" ").pop()
             if (password !== BOT_PASSWORD) {
-              bot.chat(`❌ يا ${player}, الباسورد غلط!`)
+              bot.safeChat(`❌ يا ${player}, الباسورد غلط!`)
               return
             }
             bot.pathfinder.setGoal(null)
-            bot.chat(`🛑 تمام يا ${player}, وقفت المتابعة!`)
+            bot.safeChat(`🛑 تمام يا ${player}, وقفت المتابعة!`)
+          }
+
+          // ====== build tower ======
+          if (lowerMsg.startsWith(bot.username.toLowerCase() + " build tower")) {
+            const password = lowerMsg.split(" ").pop()
+            if (password !== BOT_PASSWORD) return bot.safeChat("❌ باسورد غلط")
+            bot.safeChat("🧱 ببني برج!")
+
+            const block = bot.inventory.items().find(i => i.name.includes("block"))
+            if (!block) return bot.safeChat("❌ ماعنديش بلوكات للبناء")
+
+            ;(async () => {
+              try {
+                await bot.equip(block, 'hand')
+                for (let i = 0; i < 10; i++) {
+                  const pos = bot.entity.position.floored()
+                  const blockBelow = bot.blockAt(pos.offset(0, -1, 0))
+                  await bot.placeBlock(blockBelow, { x: 0, y: 1, z: 0 })
+                  await new Promise(r => setTimeout(r, 500))
+                }
+                bot.safeChat("✅ خلصت البرج!")
+              } catch (err) {
+                bot.safeChat("❌ مش قادر ابني البرج")
+                console.log(err)
+              }
+            })()
+          }
+
+          // ====== build house ======
+          if (lowerMsg.startsWith(bot.username.toLowerCase() + " build house")) {
+            const password = lowerMsg.split(" ").pop()
+            if (password !== BOT_PASSWORD) return bot.safeChat("❌ باسورد غلط")
+
+            bot.safeChat(`🏠 ببني بيت صغير!`)
+            const block = bot.inventory.items().find(i => i.name.includes("block"))
+            if (!block) return bot.safeChat("❌ ماعنديش بلوكات للبناء")
+
+            ;(async () => {
+              try {
+                await bot.equip(block, 'hand')
+                const pos = bot.entity.position.floored()
+
+                // الحيطان (5x5 وارتفاع 4)
+                for (let y = 0; y < 4; y++) {
+                  for (let x = 0; x < 5; x++) {
+                    for (let z = 0; z < 5; z++) {
+                      if (x === 0 || x === 4 || z === 0 || z === 4) {
+                        // يسيب باب (فراغ في الأمام)
+                        if (z === 0 && (x === 2 || x === 3) && y < 2) continue
+                        const target = bot.blockAt(pos.offset(x, y, z))
+                        await bot.placeBlock(target, { x: 0, y: 1, z: 0 })
+                        await new Promise(r => setTimeout(r, 300))
+                      }
+                    }
+                  }
+                }
+
+                // السقف
+                for (let x = 0; x < 5; x++) {
+                  for (let z = 0; z < 5; z++) {
+                    const target = bot.blockAt(pos.offset(x, 4, z))
+                    await bot.placeBlock(target, { x: 0, y: 1, z: 0 })
+                    await new Promise(r => setTimeout(r, 300))
+                  }
+                }
+
+                bot.safeChat(`✅ خلصت البيت!`)
+              } catch (err) {
+                bot.safeChat("❌ حصل خطأ في بناء البيت")
+                console.log(err)
+              }
+            })()
           }
         })
       })
