@@ -1,68 +1,40 @@
 import mineflayer from "mineflayer";
+import 'dotenv/config';
 
-// إعدادات السيرفر
-const host = process.env.MC_HOST || "server.aternos.org"; // غير ده بـ IP السيرفر
-const port = process.env.MC_PORT || 25565;
+const host = process.env.MC_HOST;
+const port = parseInt(process.env.MC_PORT);
 
-// أسماء البوتات
-const botNames = ["GOOLDENBOT1", "GOOLDENBOT2", "GOOLDENBOT3"];
-
-// رسايل عشوائية
-const messages = [
-  "هلا شباب 👋",
-  "انا قاعد AFK 😂",
-  "مين موجود؟",
-  "🔥 السيرفر جامد",
-  "😂😂😂"
-];
-
-// دالة لعمل بوت جديد
-function createBot(name) {
+function createBot(username) {
   const bot = mineflayer.createBot({
     host,
     port,
-    username: name, // اسم البوت
+    username,
   });
 
-  bot.once("spawn", () => {
-    console.log(`✅ ${name} دخل السيرفر`);
-
-    // حركة عشوائية
-    setInterval(() => {
-      const direction = ["forward", "back", "left", "right"];
-      const move = direction[Math.floor(Math.random() * direction.length)];
-      bot.setControlState(move, true);
-      setTimeout(() => bot.setControlState(move, false), 2000);
-    }, 5000);
-
-    // يجري أحيانا
-    setInterval(() => {
-      bot.setControlState("sprint", true);
-      setTimeout(() => bot.setControlState("sprint", false), 3000);
-    }, 15000);
-
-    // يقفز من وقت للتاني
-    setInterval(() => {
-      bot.setControlState("jump", true);
-      setTimeout(() => bot.setControlState("jump", false), 1000);
-    }, 10000);
-
-    // يبعت رسايل عشوائية
-    setInterval(() => {
-      const msg = messages[Math.floor(Math.random() * messages.length)];
-      bot.chat(msg);
-    }, 20000);
+  bot.on("login", () => {
+    console.log(`✅ ${username} دخل السيرفر`);
   });
 
   bot.on("end", () => {
-    console.log(`❌ ${name} خرج، بيحاول يدخل تاني...`);
-    setTimeout(() => createBot(name), 5000);
+    console.log(`❌ ${username} خرج، بيحاول يدخل تاني...`);
+    setTimeout(() => createBot(username), 5000); // يدخل تاني بعد 5 ثواني
   });
 
   bot.on("error", (err) => {
-    console.log(`⚠️ ${name} حصل فيه Error:`, err.message);
+    console.log(`⚠️ ${username} حصل فيه Error: ${err.message}`);
   });
+
+  // يبعت رسائل عشوائية كل شوية
+  const msgs = ["أنا هنا ✨", "مش AFK 😎", "GoldenBots Online 💛", "يلا نلعب 🎮"];
+  setInterval(() => {
+    if (bot.player) {
+      const msg = msgs[Math.floor(Math.random() * msgs.length)];
+      bot.chat(msg);
+    }
+  }, 60000); // كل دقيقة
 }
 
-// إنشاء ٣ بوتات
-botNames.forEach(createBot);
+// البوتات
+createBot("GOOLDENBOT1");
+createBot("GOOLDENBOT2");
+createBot("GOOLDENBOT3");
