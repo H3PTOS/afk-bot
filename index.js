@@ -28,13 +28,12 @@ const randomMessages = [
 // كول داون للشات
 let lastChat = 0
 function canChat() {
-  return Date.now() - lastChat > 45000
+  return Date.now() - lastChat > 45000 // 45 ثانية
 }
 
 // ====== إنشاء بوت ======
 function createBot(username) {
   let bot
-  let cancelBuild = false
 
   function startBot() {
     bot = mineflayer.createBot({
@@ -56,7 +55,7 @@ function createBot(username) {
       const defaultMove = new Movements(bot, mcData)
       bot.pathfinder.setMovements(defaultMove)
 
-      // safe chat
+      // شات آمن
       bot.safeChat = (msg) => {
         if (canChat()) {
           bot.chat(msg)
@@ -64,30 +63,41 @@ function createBot(username) {
         }
       }
 
-      // equip armor
+      // يلبس أي درع من الانفنتوري
       function equipArmor() {
-        const armorMap = {
-          head: "helmet",
-          torso: "chestplate",
-          legs: "leggings",
-          feet: "boots"
-        }
-        for (const slot in armorMap) {
-          const item = bot.inventory.items().find(i => i.name.includes(armorMap[slot]))
+        const armor = ['helmet', 'chestplate', 'leggings', 'boots']
+        armor.forEach(slot => {
+          const item = bot.inventory.items().find(i => i.name.includes(slot))
           if (item) bot.equip(item, slot).catch(() => {})
-        }
+        })
       }
       setInterval(equipArmor, 10000)
 
-      // auto eat لو عنده أكل
+      // يلقط أي دروع في الأرض
+      bot.on('entitySpawn', (entity) => {
+        if (entity.objectType === 'Item' && entity.metadata) {
+          const itemName = entity.metadata[7]?.itemId
+          if (!itemName) return
+          const name = mcData.items[itemName]?.name || ""
+          if (name.includes("helmet") || name.includes("chestplate") || name.includes("leggings") || name.includes("boots")) {
+            bot.pathfinder.setGoal(new goals.GoalNear(entity.position.x, entity.position.y, entity.position.z, 1))
+          }
+        }
+      })
+
+      // يهيل بالأكل
       setInterval(() => {
-        const food = bot.inventory.items().find(i => i.name.includes("bread") || i.name.includes("cooked"))
-        if (food && bot.food < 18) {
-          bot.equip(food, 'hand').then(() => bot.consume()).catch(() => {})
+        if (bot.food < 14) {
+          const food = bot.inventory.items().find(i => i.name.includes("bread") || i.name.includes("apple") || i.name.includes("cooked"))
+          if (food) {
+            bot.equip(food, 'hand').then(() => {
+              bot.consume().catch(() => {})
+            }).catch(() => {})
+          }
         }
       }, 8000)
 
-      // pvp mobs
+      // يهاجم mobs معينة بالسيف
       setInterval(() => {
         const mob = bot.nearestEntity(e =>
           e.type === 'mob' &&
@@ -103,7 +113,7 @@ function createBot(username) {
         }
       }, 5000)
 
-      // move random
+      // يتحرك عشوائي
       setInterval(() => {
         const x = bot.entity.position.x + (Math.random() * 20 - 10)
         const y = bot.entity.position.y
@@ -111,7 +121,7 @@ function createBot(username) {
         bot.pathfinder.setGoal(new goals.GoalBlock(x, y, z))
       }, 20000)
 
-      // random chat
+      // كلام عشوائي
       setInterval(() => {
         if (canChat()) {
           const msg = randomMessages[Math.floor(Math.random() * randomMessages.length)]
@@ -120,18 +130,19 @@ function createBot(username) {
         }
       }, 30000)
 
-      // commands
+      // أوامر الشات
       bot.on('chat', async (player, message) => {
         if (player === bot.username) return
         const lowerMsg = message.toLowerCase()
 
-        // ردود
+        // ردود عادية
         if (lowerMsg.includes("هاي")) bot.safeChat("هاي 🙋‍♂️")
         if (lowerMsg.includes("سلام")) bot.safeChat("تيت 👋")
 
         // give me
         if (lowerMsg.startsWith(bot.username.toLowerCase() + " give me")) {
-          const password = lowerMsg.split(" ").pop()
+          const parts = lowerMsg.split(" ")
+          const password = parts.pop()
           if (password !== BOT_PASSWORD) return bot.safeChat("❌ باسورد غلط")
 
           const targetPlayer = bot.players[player]?.entity
@@ -173,7 +184,6 @@ function createBot(username) {
           const password = lowerMsg.split(" ").pop()
           if (password !== BOT_PASSWORD) return bot.safeChat("❌ باسورد غلط")
           bot.safeChat("🧱 ببني برج!")
-          cancelBuild = false
 
           const block = bot.inventory.items().find(i => i.name.includes("block"))
           if (!block) return bot.safeChat("❌ ماعنديش بلوكات للبناء")
@@ -182,7 +192,6 @@ function createBot(username) {
             try {
               await bot.equip(block, 'hand')
               for (let i = 0; i < 10; i++) {
-                if (cancelBuild) break
                 const pos = bot.entity.position.floored()
                 const blockBelow = bot.blockAt(pos.offset(0, -1, 0))
                 await bot.placeBlock(blockBelow, { x: 0, y: 1, z: 0 })
@@ -198,7 +207,6 @@ function createBot(username) {
           const password = lowerMsg.split(" ").pop()
           if (password !== BOT_PASSWORD) return bot.safeChat("❌ باسورد غلط")
           bot.safeChat("🏠 ببني بيت!")
-          cancelBuild = false
 
           const block = bot.inventory.items().find(i => i.name.includes("block"))
           if (!block) return bot.safeChat("❌ ماعنديش بلوكات للبناء")
@@ -210,7 +218,6 @@ function createBot(username) {
               for (let y = 0; y < 4; y++) {
                 for (let x = 0; x < 5; x++) {
                   for (let z = 0; z < 5; z++) {
-                    if (cancelBuild) break
                     if (x === 0 || x === 4 || z === 0 || z === 4) {
                       if (z === 0 && (x === 2 || x === 3) && y < 2) continue
                       const target = bot.blockAt(pos.offset(x, y, z))
@@ -220,14 +227,11 @@ function createBot(username) {
                   }
                 }
               }
-              if (!cancelBuild) {
-                for (let x = 0; x < 5; x++) {
-                  for (let z = 0; z < 5; z++) {
-                    if (cancelBuild) break
-                    const target = bot.blockAt(pos.offset(x, 4, z))
-                    await bot.placeBlock(target, { x: 0, y: 1, z: 0 })
-                    await new Promise(r => setTimeout(r, 300))
-                  }
+              for (let x = 0; x < 5; x++) {
+                for (let z = 0; z < 5; z++) {
+                  const target = bot.blockAt(pos.offset(x, 4, z))
+                  await bot.placeBlock(target, { x: 0, y: 1, z: 0 })
+                  await new Promise(r => setTimeout(r, 300))
                 }
               }
               bot.safeChat("✅ خلصت البيت!")
@@ -239,13 +243,49 @@ function createBot(username) {
         if (lowerMsg.startsWith(bot.username.toLowerCase() + " stop build")) {
           const password = lowerMsg.split(" ").pop()
           if (password !== BOT_PASSWORD) return bot.safeChat("❌ باسورد غلط")
-          cancelBuild = true
           bot.pathfinder.setGoal(null)
           bot.safeChat(`🛑 وقفت البناء!`)
+        }
+
+        // guard
+        if (lowerMsg.startsWith(bot.username.toLowerCase() + " guard")) {
+          const password = lowerMsg.split(" ").pop()
+          if (password !== BOT_PASSWORD) return bot.safeChat("❌ باسورد غلط")
+
+          const pos = bot.entity.position.floored()
+          bot.safeChat(`🛡️ بحرس هنا!`)
+          let step = 0
+          setInterval(() => {
+            const dx = Math.cos(step) * 5
+            const dz = Math.sin(step) * 5
+            bot.pathfinder.setGoal(new goals.GoalBlock(pos.x + dx, pos.y, pos.z + dz))
+            step += Math.PI / 2
+          }, 6000)
+        }
+
+        // patrol
+        if (lowerMsg.startsWith(bot.username.toLowerCase() + " patrol")) {
+          const password = lowerMsg.split(" ").pop()
+          if (password !== BOT_PASSWORD) return bot.safeChat("❌ باسورد غلط")
+          bot.safeChat("🚶‍♂️ بعمل دورية حوالين المكان!")
+
+          const base = bot.entity.position.floored()
+          const points = [
+            base.offset(5, 0, 5),
+            base.offset(-5, 0, 5),
+            base.offset(-5, 0, -5),
+            base.offset(5, 0, -5)
+          ]
+          let i = 0
+          setInterval(() => {
+            bot.pathfinder.setGoal(new goals.GoalBlock(points[i].x, points[i].y, points[i].z))
+            i = (i + 1) % points.length
+          }, 10000)
         }
       })
     })
 
+    // Errors + reconnect
     bot.on('error', err => console.log(`❌ Error ${username}:`, err))
     bot.on('end', () => {
       console.log(`⚠️ ${username} خرج، هيعيد الدخول بعد 30 ثانية...`)
@@ -256,10 +296,10 @@ function createBot(username) {
   startBot()
 }
 
-// شغل البوتات كلها
+// تشغيل كل البوتات
 botNames.forEach(name => createBot(name))
 
-// Web server
+// Web server للـ Railway
 const app = express()
 app.get('/', (req, res) => res.send('✅ Smart Minecraft Bots are running!'))
 app.listen(process.env.PORT || 3000, () => {
