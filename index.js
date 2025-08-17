@@ -5,7 +5,7 @@
 const mineflayer = require('mineflayer');
 const { pathfinder, Movements, goals } = require('mineflayer-pathfinder');
 const { GoalNear, GoalBlock } = goals;
-const { mineflayer: mineflayerViewer } = require('prismarine-viewer');
+const mineflayerViewer = require('prismarine-viewer').mineflayer;
 const fs = require('fs');
 const vec3 = require('vec3');
 const mcData = require('minecraft-data')('1.21.1');
