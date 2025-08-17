@@ -1,14 +1,15 @@
-// index_part1.js
-// Minecraft Multi-Bot Part 1/5 (~180-200 سطر تقريبا)
+// index_final_part1.js
+// Minecraft Multi-Bot Final Part 1/5 (~200 سطر)
 // Bots: GOOLDENBOT-1, 2, 3
-// Password system: 7717101
-// Includes setup, chat listener, password validation, placeholders
+// Password: 7717101
+// Includes setup, chat listener, password validation, placeholders, pathfinder injection
 
 const mineflayer = require('mineflayer');
 const { pathfinder, Movements, goals } = require('mineflayer-pathfinder');
-const { GoalFollow, GoalBlock } = goals;
+const { GoalNear, GoalBlock } = goals;
 const { mineflayer: mineflayerViewer } = require('prismarine-viewer');
 const fs = require('fs');
+const vec3 = require('vec3');
 const mcData = require('minecraft-data')('1.21.1');
 
 const PASSWORD = '7717101';
@@ -26,19 +27,21 @@ for (let i = 1; i <= BOT_COUNT; i++) {
   });
   injectPlugins(bot);
   setupListeners(bot, i);
+  setupAntiCrash(bot, i);
   bots.push(bot);
 }
 
-// ================= PLUGIN INJECTION =================
+// ================== PLUGINS ==================
 function injectPlugins(bot) {
   bot.loadPlugin(pathfinder);
 }
 
-// ================= LISTENERS + CHAT =================
+// ================== LISTENERS ==================
 function setupListeners(bot, id) {
   bot.once('spawn', () => {
-    console.log(`[BOT ${id}] Spawned!`);
+    console.log(`[BOT ${id}] Spawned`);
     mineflayerViewer(bot, { port: 3000 + id, firstPerson: false });
+    bot.chat(`§a[BOT ${id}] جاهز للتنفيذ!`);
   });
 
   bot.on('chat', async (username, message) => {
@@ -59,108 +62,38 @@ function setupListeners(bot, id) {
 
     console.log(`[BOT ${id}] Command: ${action}, amount: ${amount}`);
 
-    // ================== PLACEHOLDER FOR COMMANDS ==================
-    // 1. collectBlock(bot, blockName, amount)
-    // 2. farmCrop(bot, crop)
-    // 3. mineOre(bot, oreName, amount)
-    // 4. interactChest(bot, mode)
-    // 5. craftItem(bot, itemName, amount)
-    // 6. smeltItem(bot, input, fuel, output, amount)
-    // 7. buildStructure(bot, filename)
-    // 8. activateBodyguard(bot, username)
-    // 9. searchBlockOrChest(bot, itemName, username)
+    // ================== COMMAND PLACEHOLDERS ==================
+    if (action.includes('خشب')) collectBlock(bot, 'oak_log', amount);
+    else if (action.includes('ستون')) collectBlock(bot, 'stone', amount);
+    else if (action.includes('ديرت')) collectBlock(bot, 'dirt', amount);
+    else if (action.includes('قمح')) farmCrop(bot, 'wheat');
+    else if (action.includes('بطاطس')) farmCrop(bot, 'potatoes');
+    else if (action.includes('جزر')) farmCrop(bot, 'carrots');
+    else if (action.includes('دايموند')) mineOre(bot, 'diamond_ore', amount);
+    else if (action.includes('ايرون')) mineOre(bot, 'iron_ore', amount);
+    else if (action.includes('جولد')) mineOre(bot, 'gold_ore', amount);
+    else if (action.includes('ابني قلعه')) buildCastle(bot);
+    else if (action.includes('ابني محل')) buildShop(bot);
+    else if (action.includes('وقف بناء')) bot.chat('§eتم إيقاف البناء!');
+    else if (action.includes('صندوق')) interactChest(bot, amount);
+    else if (action.includes('كرافت')) craftItem(bot, 'stone_bricks', amount);
+    else if (action.includes('طبخ')) smeltItem(bot, 'iron_ore', 'coal', 'iron_ingot', amount);
+    else if (action.includes('احميني')) activateBodyguard(bot, username);
+    else if (action.includes('دور علي')) searchBlockOrChest(bot, action.replace('دور علي','').replace(/[«»]/g,''), username);
+    else bot.chat('§7مش فاهم قصدك، حاول تكتب تاني!');
   });
 
   bot.on('kicked', reason => console.log(`[BOT ${id}] Kicked:`, reason));
   bot.on('error', err => console.log(`[BOT ${id}] Error:`, err));
-      }
-// index_part2.js
-// Minecraft Multi-Bot Part 2/5 (~180-200 سطر)
-// Implements farming, mining, chests, crafting, smelting, building placeholders
-
-async function collectBlock(bot, blockName, amount) {
-  bot.chat(`§aهجمع ${amount} من ${blockName}`);
-  // TODO: implement pathfinder logic to find and mine the block
 }
 
-async function farmCrop(bot, crop) {
-  bot.chat(`§aبزرع وحاصد ${crop}`);
-  // TODO: implement automatic harvesting and replanting
-}
-
-async function mineOre(bot, oreName, amount) {
-  bot.chat(`§bبعدين ${amount} من ${oreName}`);
-  // TODO: implement ore mining with pathfinding
-}
-
-async function interactChest(bot, mode) {
-  bot.chat(`§6بفتح الصندوق - مود: ${mode}`);
-  // TODO: implement open/store/retrieve logic
-}
-
-async function craftItem(bot, itemName, amount) {
-  bot.chat(`§9بعمل ${amount} × ${itemName}`);
-  // TODO: implement crafting
-}
-
-async function smeltItem(bot, input, fuel, output, amount) {
-  bot.chat(`§cبطبخ ${amount} ${input} في الفرن`);
-  // TODO: implement smelting
-}
-
-async function buildStructure(bot, filename) {
-  bot.chat(`§dببني ملف ${filename}`);
-  // TODO: implement schematic/litematic building
-}
-
-// =================== AI Chat Responses ===================
-const AI_RESPONSES = {
-  'السلام': 'وعليكم السلام ورحمة الله! 😊',
-  'ازيك': 'تمام الحمد لله، وانت؟',
-  'انت مين': 'انا بوت مساعد في السيرفر 🤖',
-  'شكرا': 'العفو يا صديقي 🙏'
-};
-
-bots.forEach((bot, id) => {
-  bot.on('chat', (username, message) => {
-    if (username === bot.username) return;
-    for (let key in AI_RESPONSES) {
-      if (message.includes(key)) {
-        setTimeout(() => bot.chat(AI_RESPONSES[key]), 500);
-      }
-    }
-  });
-});
-// index_part3.js
-// Minecraft Multi-Bot Part 3/5 (~180-200 سطر)
-// Implements Bodyguard, search, anti-crash, reconnect placeholders
-
-// =================== BODYGUARD ===================
-async function activateBodyguard(bot, username) {
-  bot.chat(`§eتشغيل Bodyguard لحماية ${username}`);
-  // TODO: find nearest hostile mobs and attack them
-  // TODO: follow the player if necessary
-}
-
-// =================== SEARCH BLOCK OR CHEST ===================
-async function searchBlockOrChest(bot, itemName, username) {
-  bot.chat(`§aبدور على ${itemName} حوالين البوت...`);
-  // TODO: search nearby blocks for itemName
-  // TODO: if not found, open nearby chests and search inside
-  // TODO: report result to username
-}
-
-// =================== ANTI-CRASH + RECONNECT ===================
+// ================== ANTI-CRASH ==================
 function setupAntiCrash(bot, id) {
   bot.on('end', () => {
-    console.log(`[BOT ${id}] Disconnected! Trying reconnect in 10s...`);
+    console.log(`[BOT ${id}] Disconnected! Reconnecting in 10s...`);
     setTimeout(() => reconnectBot(id), 10000);
   });
-
-  bot.on('error', err => {
-    console.log(`[BOT ${id}] Error:`, err);
-    // optionally attempt reconnect here
-  });
+  bot.on('error', err => console.log(`[BOT ${id}] Error:`, err));
 }
 
 function reconnectBot(id) {
@@ -174,16 +107,112 @@ function reconnectBot(id) {
   setupListeners(bot, id);
   setupAntiCrash(bot, id);
   bots[id - 1] = bot;
+           }
+// index_final_part2.js
+// Implements Mining, Farming, Chest, Crafting, Smelting, Building placeholders
+
+// ================== RESOURCE COLLECTION ==================
+async function collectBlock(bot, blockName, amount) {
+  bot.chat(`§aهجمع ${amount} من ${blockName}`);
+  // TODO: implement pathfinder to find nearest block of blockName
+  // TODO: mine the block and add to inventory
 }
 
-// Attach anti-crash to all bots
-bots.forEach((b, i) => setupAntiCrash(b, i + 1));
-// index_part4.js
-// Minecraft Multi-Bot Part 4/5 (~180-200 سطر)
-// Implements schematic/litematic building placeholders
+async function farmCrop(bot, crop) {
+  bot.chat(`§aبزرع وحاصد ${crop}`);
+  // TODO: find nearest fully grown crop, harvest it, replant
+}
 
-const vec3 = require('vec3');
+async function mineOre(bot, oreName, amount) {
+  bot.chat(`§bبنزل أجيب ${amount} من ${oreName}`);
+  // TODO: find nearest ore block with pathfinder, mine it
+}
 
+// ================== CHEST INTERACTIONS ==================
+async function interactChest(bot, mode) {
+  bot.chat(`§6فتح الصندوق - مود: ${mode}`);
+  // TODO: find nearest chest, open it
+  // TODO: store/retrieve items as per mode
+}
+
+// ================== CRAFTING ==================
+async function craftItem(bot, itemName, amount) {
+  bot.chat(`§9بعمل ${amount} × ${itemName}`);
+  // TODO: check inventory, craft the item
+}
+
+// ================== SMELTING ==================
+async function smeltItem(bot, input, fuel, output, amount) {
+  bot.chat(`§cبطبخ ${amount} ${input} في الفرن`);
+  // TODO: place items in furnace, fuel it, collect output
+}
+
+// ================== BUILDING ==================
+async function buildStructure(bot, filename) {
+  bot.chat(`§dببني ملف ${filename}`);
+  // TODO: parse schematic/litematic file
+  // TODO: place blocks using pathfinder to move + place
+}
+
+async function buildCastle(bot) {
+  await buildStructure(bot, 'castle.schematic');
+}
+
+async function buildShop(bot) {
+  await buildStructure(bot, 'shop.litematic');
+}
+
+// ================== BODYGUARD ==================
+async function activateBodyguard(bot, targetUsername) {
+  bot.chat(`§eBodyguard active for ${targetUsername}`);
+  // TODO: find nearest hostile mobs and attack
+  // TODO: follow targetUsername if needed
+}
+
+// ================== SEARCH BLOCK OR CHEST ==================
+async function searchBlockOrChest(bot, itemName, username) {
+  bot.chat(`§aبدور على ${itemName} حوالين البوت...`);
+  // TODO: search nearby blocks for itemName
+  // TODO: if not found, check nearby chests
+  // TODO: report location and quantity to username
+}
+
+// ================== AI CHAT RESPONSES ==================
+const AI_RESP
+// index_final_part3.js
+// Advanced placeholders: inventory management, smart search, bodyguard loops
+
+// ================== INVENTORY MANAGEMENT ==================
+async function manageInventory(bot) {
+  bot.chat(`§eفحص Inventory وتنظيمه`);
+  // TODO: sort items, drop unwanted items, equip tools
+}
+
+// ================== ADVANCED FARMING ==================
+async function advancedFarming(bot) {
+  bot.chat(`§aتشغيل زراعة تلقائية متقدمة`);
+  // TODO: auto harvest, replant, collect drops efficiently
+}
+
+// ================== ADVANCED MINING ==================
+async function advancedMining(bot) {
+  bot.chat(`§bتشغيل تعدين تلقائي متقدم`);
+  // TODO: pathfinder to ores, mine efficiently, store in chest
+}
+
+// ================== BODYGUARD LOOP ==================
+async function bodyguardLoop(bot, targetUsername) {
+  bot.chat(`§eBodyguard active for ${targetUsername}`);
+  // TODO: follow player, attack hostiles, retreat when low health
+}
+
+// ================== SMART SEARCH ==================
+async function smartSearch(bot, itemName, username) {
+  bot.chat(`§aSmart search for ${itemName} triggered by ${username}`);
+  // TODO: search world, check chests, report quantity & location
+}
+
+// ================== BUILDING WITH SCHEMATIC/LITEMATIC ==================
 async function placeBlock(bot, position, blockName) {
   bot.chat(`§dبضع بلوك ${blockName} في ${position.x},${position.y},${position.z}`);
   // TODO: move to position and place the block
@@ -191,19 +220,15 @@ async function placeBlock(bot, position, blockName) {
 
 async function buildSchematic(bot, schematicFile) {
   bot.chat(`§dببني schematic من الملف: ${schematicFile}`);
-  // TODO: read schematic file
-  // TODO: loop through blocks and placeBlock
-  // TODO: manage inventory
+  // TODO: read schematic file, loop through blocks, placeBlock
 }
 
 async function buildLitematic(bot, litematicFile) {
   bot.chat(`§dببني litematic من الملف: ${litematicFile}`);
-  // TODO: parse litematic
-  // TODO: loop through blocks and place
-  // TODO: manage inventory
+  // TODO: parse litematic, loop through blocks, place
 }
 
-// =================== SPECIFIC BUILD COMMANDS ===================
+// ================== SPECIFIC BUILD COMMANDS ==================
 async function buildCastle(bot) {
   await buildSchematic(bot, 'castle.schematic');
 }
@@ -212,21 +237,67 @@ async function buildShop(bot) {
   await buildLitematic(bot, 'shop.litematic');
 }
 
+// ================== SEARCH/RETRIEVE COMMAND ==================
+async function searchAndRetrieve(bot, itemName, username) {
+  bot.chat(`§aبحث وجلب ${itemName} للبلاير ${username}`);
+  // TODO: search world and chests, pick up item, deliver to player
+}
+
+// ================== END OF ADVANCED PLACEHOLDERS ==================
+// All loops, inventory management, smart search, bodyguard, and advanced building
+// index_final_part4.js
+// Building advanced structures using schematic/litematic and placeBlock
+
+const vec3 = require('vec3');
+
+// ================== PLACE BLOCK ==================
+async function placeBlock(bot, position, blockName) {
+  bot.chat(`§dبضع بلوك ${blockName} في ${position.x},${position.y},${position.z}`);
+  // TODO: move to the position using pathfinder and place the block
+}
+
+// ================== BUILD SCHEMATIC ==================
+async function buildSchematic(bot, schematicFile) {
+  bot.chat(`§dببني schematic من الملف: ${schematicFile}`);
+  // TODO: parse schematic file
+  // TODO: loop through all blocks and call placeBlock
+  // TODO: manage inventory automatically
+}
+
+// ================== BUILD LITEMATIC ==================
+async function buildLitematic(bot, litematicFile) {
+  bot.chat(`§dببني litematic من الملف: ${litematicFile}`);
+  // TODO: parse litematic file
+  // TODO: loop through all blocks and call placeBlock
+  // TODO: manage inventory automatically
+}
+
+// ================== SPECIFIC BUILD COMMANDS ==================
+async function buildCastle(bot) {
+  bot.chat('§dببني القلعة الآن');
+  await buildSchematic(bot, 'castle.schematic');
+}
+
+async function buildShop(bot) {
+  bot.chat('§dببني المحل الآن');
+  await buildLitematic(bot, 'shop.litematic');
+}
+
+// ================== INTEGRATION ==================
 // Command listener placeholders will call these functions:
 // if action.includes('ابني قلعه') => buildCastle(bot)
 // if action.includes('ابني محل')  => buildShop(bot)
-// index_part5.js
-// Minecraft Multi-Bot Part 5/5 (~150-180 سطر)
+// index_final_part5.js
 // Final placeholders, completion messages, detailed comments
 
-// =================== COMPLETION MESSAGES ===================
+// ================== COMPLETION MESSAGES ==================
 bots.forEach((bot, id) => {
   bot.once('spawn', () => {
     bot.chat(`§a[BOT ${id}] جاهز للتنفيذ!`);
   });
 });
 
-// =================== DETAILED PLACEHOLDERS ===================
+// ================== DETAILED PLACEHOLDERS ==================
 
 // Inventory Management Example
 async function manageInventory(bot) {
@@ -258,7 +329,7 @@ async function smartSearch(bot, itemName, username) {
   // TODO: search world, check chests, report quantity & location
 }
 
-// =================== END OF FILE ===================
+// ================== END OF FILE ==================
 // All parts combined: bots setup, chat commands, farming, mining,
 // crafting, smelting, building, bodyguard, search, AI chat,
 // anti-crash, reconnect, placeholders for full functionality.
