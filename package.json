@@ -1,16 +1,22 @@
 {
-  "name": "my-minecraft-bot",
+  "name": "minecraft-multi-bot",
   "version": "1.0.0",
-  "description": "Minecraft multi-bot with prismarine-viewer",
+  "description": "Minecraft multi-bot with prismarine-viewer, pathfinder, AFK features",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
+  "keywords": ["minecraft", "mineflayer", "bot", "prismarine-viewer", "afk"],
+  "author": "YourName",
+  "license": "MIT",
   "dependencies": {
     "mineflayer": "^4.4.0",
     "mineflayer-pathfinder": "^1.6.3",
     "prismarine-viewer": "^1.0.4",
     "vec3": "^0.1.7",
     "minecraft-data": "^2.77.0"
+  },
+  "engines": {
+    "node": ">=18.0.0 <=22.0.0"
   }
 }
