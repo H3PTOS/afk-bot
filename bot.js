@@ -1,75 +1,68 @@
-import 'dotenv/config';
-import {
-  Client,
-  GatewayIntentBits,
-  Partials,
-  Events
-} from 'discord.js';
+import mineflayer from "mineflayer";
 
-const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
-  ],
-  partials: [Partials.Channel]
-});
+// إعدادات السيرفر
+const host = process.env.MC_HOST || "server.aternos.org"; // غير ده بـ IP السيرفر
+const port = process.env.MC_PORT || 25565;
 
-const PREFIX = '!';
-const afkMap = new Map(); // userId -> { reason, since }
+// أسماء البوتات
+const botNames = ["GOOLDENBOT1", "GOOLDENBOT2", "GOOLDENBOT3"];
 
-// Ready
-client.once(Events.ClientReady, () => {
-  console.log(`✅ Logged in as ${client.user.tag}`);
-});
+// رسايل عشوائية
+const messages = [
+  "هلا شباب 👋",
+  "انا قاعد AFK 😂",
+  "مين موجود؟",
+  "🔥 السيرفر جامد",
+  "😂😂😂"
+];
 
-// Message handler
-client.on(Events.MessageCreate, async (msg) => {
-  if (msg.author.bot || !msg.guild) return;
+// دالة لعمل بوت جديد
+function createBot(name) {
+  const bot = mineflayer.createBot({
+    host,
+    port,
+    username: name, // اسم البوت
+  });
 
-  // If AFK user talks -> remove AFK
-  if (afkMap.has(msg.author.id)) {
-    afkMap.delete(msg.author.id);
-    try {
-      await msg.reply(`مرحبًا رجعت! شلت عنك حالة AFK ✅`);
-    } catch (_) {}
-  }
+  bot.once("spawn", () => {
+    console.log(`✅ ${name} دخل السيرفر`);
 
-  // Notify when mentioning AFK users
-  if (msg.mentions.users.size > 0) {
-    for (const [, user] of msg.mentions.users) {
-      if (afkMap.has(user.id)) {
-        const { reason, since } = afkMap.get(user.id);
-        const minutes = Math.floor((Date.now() - since) / 60000);
-        await msg.reply(
-          `${user.tag} حاليًا AFK منذ ${minutes} دقيقة${minutes !== 1 ? '' : ''}.\nالسبب: ${reason || 'بدون سبب'}`
-        );
-      }
-    }
-  }
+    // حركة عشوائية
+    setInterval(() => {
+      const direction = ["forward", "back", "left", "right"];
+      const move = direction[Math.floor(Math.random() * direction.length)];
+      bot.setControlState(move, true);
+      setTimeout(() => bot.setControlState(move, false), 2000);
+    }, 5000);
 
-  // Commands
-  if (!msg.content.startsWith(PREFIX)) return;
-  const [cmd, ...args] = msg.content.slice(PREFIX.length).trim().split(/\s+/);
+    // يجري أحيانا
+    setInterval(() => {
+      bot.setControlState("sprint", true);
+      setTimeout(() => bot.setControlState("sprint", false), 3000);
+    }, 15000);
 
-  if (cmd.toLowerCase() === 'afk') {
-    const reason = args.join(' ').trim();
-    afkMap.set(msg.author.id, { reason, since: Date.now() });
-    return void msg.reply(`تمام! فعلت لك AFK${reason ? ` — السبب: ${reason}` : ''} 💤`);
-  }
+    // يقفز من وقت للتاني
+    setInterval(() => {
+      bot.setControlState("jump", true);
+      setTimeout(() => bot.setControlState("jump", false), 1000);
+    }, 10000);
 
-  if (cmd.toLowerCase() === 'back' || cmd.toLowerCase() === 'unafk') {
-    if (afkMap.has(msg.author.id)) {
-      afkMap.delete(msg.author.id);
-      return void msg.reply(`شلت عنك AFK ✅`);
-    } else {
-      return void msg.reply(`انت مش على AFK حاليا.`);
-    }
-  }
+    // يبعت رسايل عشوائية
+    setInterval(() => {
+      const msg = messages[Math.floor(Math.random() * messages.length)];
+      bot.chat(msg);
+    }, 20000);
+  });
 
-  if (cmd.toLowerCase() === 'ping') {
-    return void msg.reply(`Pong! 🏓`);
-  }
-});
+  bot.on("end", () => {
+    console.log(`❌ ${name} خرج، بيحاول يدخل تاني...`);
+    setTimeout(() => createBot(name), 5000);
+  });
 
-client.login(process.env.BOT_TOKEN);
+  bot.on("error", (err) => {
+    console.log(`⚠️ ${name} حصل فيه Error:`, err.message);
+  });
+}
+
+// إنشاء ٣ بوتات
+botNames.forEach(createBot);
