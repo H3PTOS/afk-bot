@@ -1,8 +1,8 @@
 import mineflayer from "mineflayer";
-import 'dotenv/config';
 
-const host = process.env.MC_HOST;
-const port = parseInt(process.env.MC_PORT);
+// السيرفر (Cracked Aternos)
+const host = "GOLDEN-u8nn.aternos.me";
+const port = 23761;
 
 function createBot(username) {
   const bot = mineflayer.createBot({
@@ -24,7 +24,7 @@ function createBot(username) {
     console.log(`⚠️ ${username} حصل فيه Error: ${err.message}`);
   });
 
-  // يبعت رسائل عشوائية كل شوية
+  // رسائل عشوائية
   const msgs = ["أنا هنا ✨", "مش AFK 😎", "GoldenBots Online 💛", "يلا نلعب 🎮"];
   setInterval(() => {
     if (bot.player) {
@@ -34,7 +34,7 @@ function createBot(username) {
   }, 60000); // كل دقيقة
 }
 
-// البوتات
+// إنشاء ٣ بوتات
 createBot("GOOLDENBOT1");
 createBot("GOOLDENBOT2");
 createBot("GOOLDENBOT3");
