@@ -1,13 +1,12 @@
 {
   "name": "afk-bot",
   "version": "1.0.0",
+  "description": "AFK bot for Minecraft",
   "main": "index.js",
-  "type": "module",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "mineflayer": "latest",
-    "express": "latest"
+    "mineflayer": "^4.20.0"
   }
 }
