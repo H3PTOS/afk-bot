@@ -1,94 +1,61 @@
-const mineflayer = require('mineflayer');
-const { pathfinder, Movements } = require('mineflayer-pathfinder');
-const autoeat = require('mineflayer-auto-eat').plugin;
+require("dotenv").config();
+const puppeteer = require("puppeteer");
 
-// إعدادات السيرفر
-const serverHost = "GOLDEN-u8nn.aternos.me"; // غيره لو محتاج
-const serverPort = 23761;
+async function renewServers() {
+  const email = process.env.TICK_EMAIL;
+  const password = process.env.TICK_PASSWORD;
 
-// 🟢 دالة توليد اسم عشوائي
-function randomName() {
-  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-  let name = '';
-  for (let i = 0; i < 8; i++) {
-    name += chars.charAt(Math.floor(Math.random() * chars.length));
+  if (!email || !password) {
+    console.error("❌ لازم تضيف TICK_EMAIL و TICK_PASSWORD");
+    process.exit(1);
   }
-  return "Player_" + name;
+
+  const browser = await puppeteer.launch({ headless: true });
+  const page = await browser.newPage();
+
+  try {
+    console.log("🌍 بفتح صفحة TickHosting...");
+    await page.goto("https://panel.tickhosting.com/auth/login", { waitUntil: "networkidle2" });
+
+    // تسجيل الدخول
+    await page.type('input[name="email"]', email);
+    await page.type('input[name="password"]', password);
+    await page.click('button[type="submit"]');
+    await page.waitForNavigation();
+    console.log("✅ تم تسجيل الدخول");
+
+    // صفحة السيرفرات
+    await page.goto("https://panel.tickhosting.com/servers", { waitUntil: "networkidle2" });
+    console.log("📋 جبت لستة السيرفرات");
+
+    // دور على كل الأزرار اللي فيها كلمة Renew
+    const renewButtons = await page.$x("//*[contains(text(),'Renew')]");
+
+    if (renewButtons.length > 0) {
+      console.log(`🔍 لقيت ${renewButtons.length} سيرفر محتاج تجديد`);
+      for (let i = 0; i < renewButtons.length; i++) {
+        try {
+          await renewButtons[i].click();
+          console.log(`✅ السيرفر رقم ${i + 1} اتجدد`);
+          await page.waitForTimeout(2000);
+        } catch (err) {
+          console.log(`⚠️ السيرفر رقم ${i + 1} حصل فيه مشكلة: ${err.message}`);
+        }
+      }
+    } else {
+      console.log("⌛ مفيش أي سيرفر محتاج تجديد دلوقتي");
+    }
+
+  } catch (err) {
+    console.error("⚠️ حصل Error عام:", err.message);
+  } finally {
+    await browser.close();
+    console.log("🚪 قفلت المتصفح");
+  }
 }
 
-// 🟢 دالة إنشاء بوت عادي
-function createBot(host, port) {
-  const name = randomName();
-  const bot = mineflayer.createBot({
-    host,
-    port,
-    username: name
-  });
+// تشغيل اللوب كل 5 دقايق (300000 ms)
+setInterval(renewServers, 300000);
 
-  bot.loadPlugin(pathfinder);
-
-  bot.once('spawn', () => {
-    console.log(`[${name}] دخل السيرفر`);
-    const mcData = require('minecraft-data')(bot.version);
-    const defaultMove = new Movements(bot, mcData);
-    bot.pathfinder.setMovements(defaultMove);
-  });
-
-  bot.on('end', () => {
-    console.log(`[${name}] خرج.. هيجرب يدخل بعد دقيقة`);
-    setTimeout(() => createBot(host, port), 60 * 1000);
-  });
-
-  bot.on('error', err => console.log(`[${name}] Error: ${err}`));
-}
-
-// 🟢 دالة إنشاء فارمر
-function createFarmer(host, port) {
-  const name = randomName();
-  const bot = mineflayer.createBot({
-    host,
-    port,
-    username: name
-  });
-
-  bot.loadPlugin(pathfinder);
-  bot.loadPlugin(autoeat);
-
-  bot.once('spawn', () => {
-    console.log(`[${name}] دخل السيرفر كفارمر!`);
-    const mcData = require('minecraft-data')(bot.version);
-    const defaultMove = new Movements(bot, mcData);
-    bot.pathfinder.setMovements(defaultMove);
-
-    // تفعيل الأكل الأوتوماتيك
-    bot.autoEat.options = {
-      priority: 'foodPoints',
-      startAt: 14,
-      bannedFood: []
-    };
-  });
-
-  bot.on('autoeat_started', () => {
-    console.log(`[${name}] بدأ ياكل`);
-  });
-
-  bot.on('autoeat_stopped', () => {
-    console.log(`[${name}] وقف أكل`);
-  });
-
-  bot.on('end', () => {
-    console.log(`[${name}] خرج.. هيجرب يدخل بعد دقيقة`);
-    setTimeout(() => createFarmer(host, port), 60 * 1000);
-  });
-
-  bot.on('error', err => console.log(`[${name}] Error: ${err}`));
-}
-
-// 🔥 تشغيل 3 بوتات عاديين + 1 فارمر
-for (let i = 0; i < 3; i++) {
-  setTimeout(() => createBot(serverHost, serverPort), i * 5000);
-}
-
-setTimeout(() => {
-  createFarmer(serverHost, serverPort);
-}, 3 * 5000 + 2000);
+// شغل أول مرة على طول
+renewServers();
