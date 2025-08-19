@@ -1,21 +1,13 @@
 {
-  "name": "tickhosting-bot",
+  "name": "afk-bot",
   "version": "1.0.0",
-  "description": "Bot to auto renew TickHosting server",
+  "description": "Auto renew bot for server",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
-  "keywords": [
-    "tickhosting",
-    "bot",
-    "renew",
-    "puppeteer"
-  ],
-  "author": "YourName",
-  "license": "MIT",
   "dependencies": {
-    "puppeteer": "^22.0.0",
-    "dotenv": "^16.0.3"
+    "puppeteer": "^21.3.8",
+    "node-cron": "^3.0.2"
   }
 }
