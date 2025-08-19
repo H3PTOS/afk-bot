@@ -11,14 +11,8 @@ RUN apt-get update && apt-get install -y \
     --no-install-recommends && \
     rm -rf /var/lib/apt/lists/*
 
-# تعيين مكان المشروع
 WORKDIR /app
-
-# نسخ ملفات المشروع
 COPY . .
-
-# تثبيت npm packages
 RUN npm install
 
-# تشغيل البوت
 CMD ["node", "index.js"]
