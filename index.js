@@ -1,61 +1,46 @@
-require("dotenv").config();
 const puppeteer = require("puppeteer");
+const cron = require("node-cron");
 
-async function renewServers() {
-  const email = process.env.TICK_EMAIL;
-  const password = process.env.TICK_PASSWORD;
+// لينك السيرفر بتاعك في Aternos (غيره باللينك الصح)
+const SERVER_URL = "https://aternos.org/server/XXXXXXX"; 
 
-  if (!email || !password) {
-    console.error("❌ لازم تضيف TICK_EMAIL و TICK_PASSWORD");
-    process.exit(1);
-  }
+// الفانكشن اللي بتعمل رينيو
+async function renewServer() {
+  console.log(`[${new Date().toISOString()}] محاولة تشغيل السيرفر...`);
 
-  const browser = await puppeteer.launch({ headless: true });
-  const page = await browser.newPage();
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ["--no-sandbox", "--disable-setuid-sandbox"]
+  });
 
   try {
-    console.log("🌍 بفتح صفحة TickHosting...");
-    await page.goto("https://panel.tickhosting.com/auth/login", { waitUntil: "networkidle2" });
+    const page = await browser.newPage();
+    await page.goto(SERVER_URL, { waitUntil: "networkidle2" });
 
-    // تسجيل الدخول
-    await page.type('input[name="email"]', email);
-    await page.type('input[name="password"]', password);
-    await page.click('button[type="submit"]');
-    await page.waitForNavigation();
-    console.log("✅ تم تسجيل الدخول");
+    // لو محتاج تسجيل دخول ضيف هنا user/pass بتوعك
+    // await page.type("#user", "اسم_الايميل");
+    // await page.type("#password", "الباسورد");
+    // await page.click("#login-button");
+    // await page.waitForNavigation();
 
-    // صفحة السيرفرات
-    await page.goto("https://panel.tickhosting.com/servers", { waitUntil: "networkidle2" });
-    console.log("📋 جبت لستة السيرفرات");
-
-    // دور على كل الأزرار اللي فيها كلمة Renew
-    const renewButtons = await page.$x("//*[contains(text(),'Renew')]");
-
-    if (renewButtons.length > 0) {
-      console.log(`🔍 لقيت ${renewButtons.length} سيرفر محتاج تجديد`);
-      for (let i = 0; i < renewButtons.length; i++) {
-        try {
-          await renewButtons[i].click();
-          console.log(`✅ السيرفر رقم ${i + 1} اتجدد`);
-          await page.waitForTimeout(2000);
-        } catch (err) {
-          console.log(`⚠️ السيرفر رقم ${i + 1} حصل فيه مشكلة: ${err.message}`);
-        }
-      }
+    // دوس على زرار Start (غير السليكتور حسب الزرار)
+    const startBtn = await page.$("button.start"); 
+    if (startBtn) {
+      await startBtn.click();
+      console.log("✔️ تم الضغط على Start!");
     } else {
-      console.log("⌛ مفيش أي سيرفر محتاج تجديد دلوقتي");
+      console.log("⚠️ ملقتش الزرار!");
     }
 
   } catch (err) {
-    console.error("⚠️ حصل Error عام:", err.message);
+    console.error("❌ Error:", err);
   } finally {
     await browser.close();
-    console.log("🚪 قفلت المتصفح");
   }
 }
 
-// تشغيل اللوب كل 5 دقايق (300000 ms)
-setInterval(renewServers, 300000);
+// شغله أول ما البوت يقوم
+renewServer();
 
-// شغل أول مرة على طول
-renewServers();
+// وجدول كل 5 دقايق
+cron.schedule("*/5 * * * *", renewServer);
