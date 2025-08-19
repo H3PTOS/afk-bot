@@ -1,12 +1,15 @@
 const puppeteer = require("puppeteer");
 const cron = require("node-cron");
 
-// لينك السيرفر بتاعك في Aternos (غيره باللينك الصح)
-const SERVER_URL = "https://aternos.org/server/XXXXXXX"; 
+// بيانات الدخول من Environment Variables في Railway
+const EMAIL = process.env.TICK_EMAIL;
+const PASSWORD = process.env.TICK_PASSWORD;
 
-// الفانكشن اللي بتعمل رينيو
+// لينك السيرفر (غيره برابط سيرفرك)
+const SERVER_URL = "https://tickhosting.asia/server/0db58fac";
+
 async function renewServer() {
-  console.log(`[${new Date().toISOString()}] محاولة تشغيل السيرفر...`);
+  console.log(`[${new Date().toISOString()}] محاولة الدخول وعمل Renew...`);
 
   const browser = await puppeteer.launch({
     headless: true,
@@ -15,25 +18,30 @@ async function renewServer() {
 
   try {
     const page = await browser.newPage();
+    await page.goto("https://tickhosting.asia/auth/login", { waitUntil: "networkidle2" });
+
+    // تسجيل الدخول
+    await page.type("input[name='email']", EMAIL);
+    await page.type("input[name='password']", PASSWORD);
+    await page.click("button[type='submit']");
+    await page.waitForNavigation();
+
+    console.log("✅ تم تسجيل الدخول");
+
+    // افتح صفحة السيرفر
     await page.goto(SERVER_URL, { waitUntil: "networkidle2" });
 
-    // لو محتاج تسجيل دخول ضيف هنا user/pass بتوعك
-    // await page.type("#user", "اسم_الايميل");
-    // await page.type("#password", "الباسورد");
-    // await page.click("#login-button");
-    // await page.waitForNavigation();
-
-    // دوس على زرار Start (غير السليكتور حسب الزرار)
-    const startBtn = await page.$("button.start"); 
-    if (startBtn) {
-      await startBtn.click();
-      console.log("✔️ تم الضغط على Start!");
+    // دور على زرار "Renew" واضغطه
+    const renewBtn = await page.$x("//*[contains(text(),'Renew')]");
+    if (renewBtn.length > 0) {
+      await renewBtn[0].click();
+      console.log("✔️ تم الضغط على زرار Renew!");
     } else {
-      console.log("⚠️ ملقتش الزرار!");
+      console.log("⚠️ السيرفر لسه شغال أو مفيش زرار Renew دلوقتي.");
     }
 
   } catch (err) {
-    console.error("❌ Error:", err);
+    console.error("❌ Error:", err.message);
   } finally {
     await browser.close();
   }
