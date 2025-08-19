@@ -1,14 +1,21 @@
 {
-  "name": "minecraft-bots",
+  "name": "tickhosting-bot",
   "version": "1.0.0",
-  "description": "AFK + Farmer Minecraft bots with random names",
+  "description": "Bot to auto renew TickHosting server",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
+  "keywords": [
+    "tickhosting",
+    "bot",
+    "renew",
+    "puppeteer"
+  ],
+  "author": "YourName",
+  "license": "MIT",
   "dependencies": {
-    "mineflayer": "^4.15.0",
-    "mineflayer-pathfinder": "^2.4.0",
-    "mineflayer-auto-eat": "^2.2.0"
+    "puppeteer": "^22.0.0",
+    "dotenv": "^16.0.3"
   }
 }
