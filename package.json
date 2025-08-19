@@ -1,7 +1,7 @@
 {
-  "name": "afk-bot",
+  "name": "tickhosting-bot",
   "version": "1.0.0",
-  "description": "Auto renew bot for server",
+  "description": "Auto renew bot for TickHosting.asia",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
