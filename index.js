@@ -1,10 +1,12 @@
-// جدولة كل 5 دقائق
-cron.schedule('*/5 * * * *', async () => {
-    console.log('🔄 التحقق إذا السيرفر محتاج تجديد');
-    await checkAndRenew();
-});
+require('dotenv').config();
+const puppeteer = require('puppeteer');
+const cron = require('node-cron');
 
-async function checkAndRenew() {
+const EMAIL = process.env.EMAIL;
+const PASSWORD = process.env.PASSWORD;
+const SERVER_URL = process.env.SERVER_URL;
+
+async function renewServer() {
     const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
     const page = await browser.newPage();
 
@@ -19,18 +21,23 @@ async function checkAndRenew() {
         // الدخول على صفحة السيرفر
         await page.goto(SERVER_URL, { waitUntil: 'networkidle2' });
 
-        // تحقق إذا فيه زر Renew
-        const renewButton = await page.$('button:contains("Renew")');
-        if (renewButton) {
-            await renewButton.click();
-            console.log('✅ السيرفر تم تجديده');
-        } else {
-            console.log('ℹ️ السيرفر لا يحتاج تجديد الآن');
-        }
+        // الضغط على زر Renew
+        const renewButtonSelector = 'button:contains("Renew")';
+        await page.click(renewButtonSelector);
 
+        console.log('✅ السيرفر تم تجديده بنجاح');
     } catch (err) {
-        console.error('❌ حدث خطأ أثناء التحقق:', err);
+        console.error('❌ حصل خطأ أثناء التجديد:', err);
     } finally {
         await browser.close();
     }
 }
+
+// جدولة كل 24 ساعة
+cron.schedule('0 0 * * *', () => {
+    console.log('🔄 بدء عملية التجديد');
+    renewServer();
+});
+
+// تشغيل أول مرة مباشرة
+renewServer();
