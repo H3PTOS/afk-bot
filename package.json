@@ -1,14 +1,12 @@
 {
-  "name": "tickhosting-bot",
+  "name": "afk-walk-bots",
   "version": "1.0.0",
-  "description": "بوت لتجديد سيرفر TickHosting تلقائي",
-  "main": "index.js",
+  "description": "Minecraft AFK bots duck1 & duck2 walking randomly",
+  "main": "afk-walk-bots.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node afk-walk-bots.js"
   },
   "dependencies": {
-    "puppeteer": "^25.3.1",
-    "node-cron": "^3.0.2",
-    "dotenv": "^16.3.1"
+    "mineflayer": "^4.16.0"
   }
 }
