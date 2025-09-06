@@ -1,47 +1,64 @@
-require('dotenv').config();
-const puppeteer = require('puppeteer');
-const cron = require('node-cron');
+const mineflayer = require('mineflayer')
 
-const EMAIL = process.env.EMAIL;
-const PASSWORD = process.env.PASSWORD;
-const SERVER_URL = process.env.SERVER_URL;
-
-async function checkAndRenew() {
-    const browser = await puppeteer.launch({ 
-        headless: true, 
-        args: ['--no-sandbox', '--disable-setuid-sandbox'] 
-    });
-    const page = await browser.newPage();
-
-    try {
-        await page.goto('https://tickhosting.asia/login', { waitUntil: 'networkidle2' });
-        await page.type('input[name=email]', EMAIL);
-        await page.type('input[name=password]', PASSWORD);
-        await page.click('button[type=submit]');
-        await page.waitForNavigation({ waitUntil: 'networkidle2' });
-
-        await page.goto(SERVER_URL, { waitUntil: 'networkidle2' });
-
-        const renewButton = await page.$('button:contains("Renew")');
-        if (renewButton) {
-            await renewButton.click();
-            console.log('✅ السيرفر تم تجديده');
-        } else {
-            console.log('ℹ️ السيرفر لا يحتاج تجديد الآن');
-        }
-
-    } catch (err) {
-        console.error('❌ حدث خطأ أثناء التحقق:', err);
-    } finally {
-        await browser.close();
-    }
+// إعدادات السيرفر بتاعك
+const CONFIG = {
+  host: 'duckRsco.aternos.me',
+  port: 23571,
+  version: false // false = يخلي البوت يتعرف أوتوماتيك على الإصدار
 }
 
-// تحقق كل 5 دقائق
-cron.schedule('*/5 * * * *', async () => {
-    console.log('🔄 التحقق إذا السيرفر محتاج تجديد');
-    await checkAndRenew();
-});
+// أسماء البوتات
+const BOT_NAMES = ['duck1', 'duck2']
 
-// تشغيل أول مرة مباشرة
-checkAndRenew();
+// وظيفة تشغيل بوت واحد
+function createBot(username) {
+  const bot = mineflayer.createBot({
+    host: CONFIG.host,
+    port: CONFIG.port,
+    username: username,
+    version: CONFIG.version
+  })
+
+  bot.on('login', () => {
+    console.log(`${username} دخل السيرفر.`)
+    wander()
+  })
+
+  bot.on('spawn', () => {
+    console.log(`${username} ظهر في العالم.`)
+  })
+
+  bot.on('error', (err) => {
+    console.log(`خطأ مع ${username}:`, err)
+  })
+
+  bot.on('end', () => {
+    console.log(`${username} خرج من السيرفر.`)
+    // إعادة تشغيل تلقائي بعد 5 ثواني
+    setTimeout(() => createBot(username), 5000)
+  })
+
+  // وظيفة الحركة العشوائية
+  function wander() {
+    const actions = ['forward', 'back', 'left', 'right', 'jump']
+    const action = actions[Math.floor(Math.random() * actions.length)]
+    const duration = 1000 + Math.random() * 2000 // من ثانية لـ 3 ثواني
+
+    if (action === 'jump') {
+      bot.setControlState('jump', true)
+      setTimeout(() => {
+        bot.setControlState('jump', false)
+        setTimeout(wander, 1000)
+      }, 400)
+    } else {
+      bot.setControlState(action, true)
+      setTimeout(() => {
+        bot.setControlState(action, false)
+        setTimeout(wander, 1000 + Math.random() * 2000)
+      }, duration)
+    }
+  }
+}
+
+// تشغيل البوتين
+BOT_NAMES.forEach(name => createBot(name))
