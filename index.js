@@ -1,64 +1,40 @@
 const mineflayer = require('mineflayer')
 
-// إعدادات السيرفر بتاعك
-const CONFIG = {
-  host: 'duckRsco.aternos.me',
-  port: 23571,
-  version: false // false = يخلي البوت يتعرف أوتوماتيك على الإصدار
-}
-
-// أسماء البوتات
-const BOT_NAMES = ['duck1', 'duck2']
-
-// وظيفة تشغيل بوت واحد
-function createBot(username) {
+// دالة تعمل بوت
+function createBot(name) {
   const bot = mineflayer.createBot({
-    host: CONFIG.host,
-    port: CONFIG.port,
-    username: username,
-    version: CONFIG.version
-  })
-
-  bot.on('login', () => {
-    console.log(`${username} دخل السيرفر.`)
-    wander()
+    host: "ojovals.aternos.me", // IP السيرفر بتاعك
+    username: name,             // اسم البوت
+    version: false              // يخلي البوت يكتشف الإصدار تلقائي
   })
 
   bot.on('spawn', () => {
-    console.log(`${username} ظهر في العالم.`)
-  })
+    console.log(`✅ ${name} دخل السيرفر`)
 
-  bot.on('error', (err) => {
-    console.log(`خطأ مع ${username}:`, err)
+    // يمشي عشوائي علشان يلفلف في العالم
+    setInterval(() => {
+      const directions = ['forward', 'back', 'left', 'right']
+      const dir = directions[Math.floor(Math.random() * directions.length)]
+
+      bot.setControlState(dir, true)
+      setTimeout(() => {
+        bot.setControlState(dir, false)
+      }, 2000) // يمشي ثانيتين
+    }, 5000) // كل 5 ثواني يغيّر اتجاه
+
+    // يعمل نطة كل دقيقة علشان مايتطردش AFK
+    setInterval(() => {
+      bot.setControlState('jump', true)
+      setTimeout(() => bot.setControlState('jump', false), 500)
+    }, 60000)
   })
 
   bot.on('end', () => {
-    console.log(`${username} خرج من السيرفر.`)
-    // إعادة تشغيل تلقائي بعد 5 ثواني
-    setTimeout(() => createBot(username), 5000)
+    console.log(`❌ ${name} خرج - بيحاول يدخل تاني...`)
+    setTimeout(() => createBot(name), 5000)
   })
-
-  // وظيفة الحركة العشوائية
-  function wander() {
-    const actions = ['forward', 'back', 'left', 'right', 'jump']
-    const action = actions[Math.floor(Math.random() * actions.length)]
-    const duration = 1000 + Math.random() * 2000 // من ثانية لـ 3 ثواني
-
-    if (action === 'jump') {
-      bot.setControlState('jump', true)
-      setTimeout(() => {
-        bot.setControlState('jump', false)
-        setTimeout(wander, 1000)
-      }, 400)
-    } else {
-      bot.setControlState(action, true)
-      setTimeout(() => {
-        bot.setControlState(action, false)
-        setTimeout(wander, 1000 + Math.random() * 2000)
-      }, duration)
-    }
-  }
 }
 
-// تشغيل البوتين
-BOT_NAMES.forEach(name => createBot(name))
+// نشغل بوتين
+createBot("AFKBOT1")
+createBot("AFKBOT2")
