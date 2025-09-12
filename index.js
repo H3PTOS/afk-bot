@@ -1,28 +1,26 @@
 const mineflayer = require('mineflayer')
 
-// دالة تعمل بوت
 function createBot(name) {
   const bot = mineflayer.createBot({
-    host: "ojovals.aternos.me", // IP السيرفر بتاعك
+    host: "ojovals.aternos.me", // IP السيرفر
+    port: 58389,                // البورت
     username: name,             // اسم البوت
-    version: false              // يخلي البوت يكتشف الإصدار تلقائي
+    version: false              // يختار الإصدار تلقائي
   })
 
   bot.on('spawn', () => {
     console.log(`✅ ${name} دخل السيرفر`)
 
-    // يمشي عشوائي علشان يلفلف في العالم
+    // حركة عشوائية
     setInterval(() => {
       const directions = ['forward', 'back', 'left', 'right']
       const dir = directions[Math.floor(Math.random() * directions.length)]
 
       bot.setControlState(dir, true)
-      setTimeout(() => {
-        bot.setControlState(dir, false)
-      }, 2000) // يمشي ثانيتين
-    }, 5000) // كل 5 ثواني يغيّر اتجاه
+      setTimeout(() => bot.setControlState(dir, false), 2000)
+    }, 5000)
 
-    // يعمل نطة كل دقيقة علشان مايتطردش AFK
+    // نطة كل دقيقة
     setInterval(() => {
       bot.setControlState('jump', true)
       setTimeout(() => bot.setControlState('jump', false), 500)
@@ -35,6 +33,5 @@ function createBot(name) {
   })
 }
 
-// نشغل بوتين
 createBot("AFKBOT1")
 createBot("AFKBOT2")
