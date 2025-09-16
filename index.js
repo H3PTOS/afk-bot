@@ -2,8 +2,8 @@ const mineflayer = require('mineflayer')
 
 function createBot(name) {
   const bot = mineflayer.createBot({
-    host: "ojovals.aternos.me", // IP السيرفر
-    port: 58389,                // البورت
+    host: "xebexxx.aternos.me", // IP السيرفر
+    port: 40724,                // البورت
     username: name,             // اسم البوت
     version: false              // يختار الإصدار تلقائي
   })
